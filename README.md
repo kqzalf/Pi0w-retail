@@ -35,6 +35,33 @@ This project provides a complete solution for anonymously tracking foot traffic 
 
 ---
 
+## 🛍️ Recommended Hardware (Order from Amazon)
+
+Here is a list of recommended hardware that can be ordered from Amazon to set up your Pi0w-retail project:
+
+1. **Raspberry Pi Zero W or Zero 2 W**  
+   - [Buy on Amazon](https://a.co/d/0FehVMd)
+
+2. **MicroSD Card (32GB or higher)**  
+   - [SanDisk Ultra 32GB MicroSD Card](https://www.amazon.com/dp/B073JWXGNT)
+
+3. **BLE + Wi-Fi Antenna (Optional, for better range)**  
+   - [Wi-Fi & BLE Antenna Kit](https://www.amazon.com/dp/B07Y2Z5MVS)
+
+4. **GPS Module (UART or USB)**  
+   - [Waveshare L76X GPS Hat for Raspberry Pi](https://www.waveshare.com/l76x-gps-hat.htm)
+
+5. **5V 2.5A Power Supply for Raspberry Pi**  
+   - [Official Raspberry Pi Power Supply](https://www.amazon.com/dp/B07TYQRXTK)
+
+6. **Raspberry Pi Case**  
+   - [Raspberry Pi Zero W Case (with Heat Sink)](https://www.amazon.com/dp/B07XH1KZNQ)
+
+7. **USB to Micro-USB OTG Adapter**  
+   - [Micro-USB OTG Adapter](https://www.amazon.com/dp/B07F6Q48ZP)
+
+---
+
 ## ⚙️ First-Time Provisioning (One Command Setup)
 
 SSH into the Pi after first boot and run:
