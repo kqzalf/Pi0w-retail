@@ -1,0 +1,14 @@
+[Unit]
+Description=BLE + Wi-Fi + GPS Logger Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/ble_wifi_gps_logger_pi.py
+WorkingDirectory=/home/pi
+StandardOutput=append:/home/pi/ble_logger.log
+StandardError=append:/home/pi/ble_logger.err
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
