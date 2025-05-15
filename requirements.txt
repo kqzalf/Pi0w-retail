@@ -1,5 +1,6 @@
 requests
-bleak
+pyserial
 pynmea2
+bleak
 pandas
 folium
