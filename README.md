@@ -1,5 +1,9 @@
 # BLE + Wi-Fi + GPS Foot Traffic Logger
 
+pi20w : https://a.co/d/0FehVMd
+gps hat: https://a.co/d/dVvAXLA
+
+
 This project provides a complete solution for anonymously tracking foot traffic in physical spaces using Raspberry Pi Zero W or similar low-power devices. It detects nearby Bluetooth Low Energy (BLE) and Wi-Fi devices, hashes their MAC addresses for anonymity, optionally tags GPS coordinates, and uploads the data to a webhook endpoint for real-time alerting, analytics, and dashboarding.
 
 ---
