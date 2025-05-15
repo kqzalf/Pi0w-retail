@@ -1,6 +1,7 @@
 # BLE + Wi-Fi + GPS Foot Traffic Logger
 
 pi20w : https://a.co/d/0FehVMd
+
 gps hat: https://a.co/d/dVvAXLA
 
 
