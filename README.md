@@ -1,130 +1,180 @@
 # BLE + Wi-Fi + GPS Foot Traffic Logger
 
-This project uses Raspberry Pi Zero W devices to detect nearby BLE and Wi-Fi devices, hash their MAC addresses, and send presence data to a central webhook for processing, alerting, and dashboarding.
+This project provides a complete solution for anonymously tracking foot traffic in physical spaces using Raspberry Pi Zero W or similar low-power devices. It detects nearby Bluetooth Low Energy (BLE) and Wi-Fi devices, hashes their MAC addresses for anonymity, optionally tags GPS coordinates, and uploads the data to a webhook endpoint for real-time alerting, analytics, and dashboarding.
 
-## Features
+---
 
-- BLE and Wi-Fi passive scanning
-- MAC address anonymization (SHA-256)
-- GPS tagging support
-- n8n integration with Slack alerts
-- Google Drive + Sheets logging
-- PDF heatmap generation with blueprint overlay
-- Looker Studio dashboard template
-- No sensitive credentials on sensor devices
+## 🚀 Features
 
-## Setup
+| Feature                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| BLE + Wi-Fi Scanning       | Passive scanning for all nearby broadcasting BLE and Wi-Fi devices         |
+| MAC Hashing                | SHA-256 anonymization of detected device MACs                               |
+| GPS Tagging                | Optional support for GPS coordinates (via USB or GPIO GPS modules)          |
+| n8n Integration            | Fully compatible with n8n for logging, alerts, dashboards                   |
+| Google Sheets Logging      | Log all data to Google Sheets via n8n                                        |
+| Slack Alerts               | Real-time alerts for burst traffic, low/no traffic, and repeat visitors     |
+| Looker Studio Dashboard    | Connect Google Sheets to visualize historical data                          |
+| Systemd Service            | Logger auto-starts and runs in background on boot                           |
+| Heatmap Generator          | Generates HTML heatmaps of device density                                   |
+| Scheduled Heatmaps         | Cron integration to auto-generate new heatmaps (every 6 hours, by default) |
+| Full Provisioning Script   | Automatically sets up the Pi with all software and system configs           |
+| Git Auto-Update            | Sensors can pull latest repo updates on boot                                |
+| ENV-Based Sensor ID        | Auto-name devices and inject into log stream via environment variable       |
 
-### Install Python Dependencies
+---
+
+## 🧰 Hardware Requirements
+
+- Raspberry Pi Zero W or Zero 2 W
+- MicroSD card (8GB+)
+- BLE + Wi-Fi antenna (internal OK)
+- Optional: GPS module (UART or USB)
+- Power supply
+- Internet access (via Wi-Fi)
+
+---
+
+## 🛠 Pi Headless Setup
+
+### 1. Flash Raspberry Pi OS Lite
+Use Raspberry Pi Imager or BalenaEtcher.
+
+### 2. Configure `/boot` Partition
+Add these files to enable headless Wi-Fi + SSH:
+- `wpa_supplicant.conf` (included)
+- An empty file named `ssh`
+
+---
+
+## ⚙️ First-Time Provisioning (One Command Setup)
+
+SSH into the Pi after first boot and run:
+
 ```bash
-pip install -r requirements.txt
+chmod +x provision_pi.sh
+SENSOR_ID=pi-west TIMEZONE=America/Chicago ./provision_pi.sh
 ```
 
-### Run Logger on Pi
+This script:
+- Updates the system
+- Installs all Python packages
+- Pulls the latest repo (or updates it)
+- Registers the systemd service
+- Injects your `SENSOR_ID` into the logger
+- Sets hostname and timezone
+
+---
+
+## 🖥 Running the Logger
+
+The systemd service runs the logger every minute on boot:
+```bash
+sudo systemctl status ble-logger.service
+sudo journalctl -u ble-logger.service -f
+```
+
+Manually test the script:
 ```bash
 python3 ble_wifi_gps_logger_pi.py
 ```
 
-### Run Heatmap and Export
+---
+
+## 📡 Data Format Example
+
+```json
+[
+  {
+    "mac_hash": "e3f0...d1ac",
+    "rssi": -71,
+    "type": "ble",
+    "timestamp": 1713123849,
+    "sensor": "pi-west",
+    "lat": 38.974,
+    "lon": -94.595
+  }
+]
+```
+
+---
+
+## 🗺️ Heatmap Generation
+
+### Manual
 ```bash
 python3 generate_heatmap.py
-python3 export_html_to_pdf.py
 ```
 
-### Lint Codebase
-```bash
-pylint $(git ls-files '*.py')
-```
-
-## Alerting (via n8n)
-
-| Alert                     | Description |
-|--------------------------|-------------|
-| Repeat Visitor           | Same hash detected more than once in session |
-| MAC Burst Detection      | Over 10 devices detected in a single scan |
-| Low Traffic Detection    | Fewer than 2 devices seen in a scan |
-| GPS Drift Detection      | Invalid GPS coordinates from sensor |
-| Sensor Offline Detection | (External: monitor missing webhook calls) |
-
-## License
-
-MIT License.
-
-
----
-
-## 🧩 Full Feature List
-
-| Feature                       | Description                                                               |
-|------------------------------|---------------------------------------------------------------------------|
-| BLE + Wi-Fi Scanning         | Detects nearby devices using passive scan (BLE + 2.4GHz Wi-Fi)            |
-| MAC Hashing (SHA-256)        | Obfuscates device identity to preserve privacy                            |
-| GPS Tagging                  | Adds GPS coordinates if module available                                  |
-| n8n Integration              | Sends scan data via webhook to n8n for logging + alerting                 |
-| Slack Alerts                 | Real-time alerts for burst traffic, low traffic, repeat visitors          |
-| Google Sheets Logging        | Appends every scan row into a structured log sheet                        |
-| Heatmap Generator            | Creates Folium HTML heatmaps with device density                         |
-| Weekly Heatmap Schedule      | Auto-generates heatmaps via cron                                          |
-| Looker Studio Dashboard      | View trends and traffic with connected Google Sheets                      |
-| Provisioning Script          | One-command setup on any Pi for sensor deployment                        |
-| Systemd Service              | Auto-starts the logger on boot via `ble_logger.service`                  |
-| Fleet Sensor ID              | Auto-names sensors using environment variables                            |
-| Git Auto-update              | Pulls the latest code from repo during provisioning                       |
-
----
-
-## 🚀 Deployment: Step-by-Step Instructions
-
-### 🖥 1. Prepare Your Raspberry Pi (Headless)
-- Flash Raspberry Pi OS Lite to SD
-- Add `wpa_supplicant.conf` to `/boot` for Wi-Fi
-- Add an empty `ssh` file to enable SSH
-
-### 🔌 2. First Boot & SSH In
-```bash
-ssh pi@raspberrypi.local
-```
-
-### ⚙️ 3. Provision the Pi
-```bash
-chmod +x provision_pi.sh
-SENSOR_ID=pi-east TIMEZONE=America/Chicago ./provision_pi.sh
-```
-This will:
-- Pull the latest repo
-- Install dependencies
-- Register the systemd logger
-- Insert your sensor ID into the script
-
-### 🧲 4. Enable Heatmap Scheduling (optional)
+### Scheduled
+Add to crontab:
 ```bash
 crontab -e
-# Add this line:
+# Every 6 hours:
 0 */6 * * * /home/pi/ble-foot-traffic-logger/schedule_heatmap.sh
 ```
 
-### 🌐 5. Deploy n8n Server
-Use Docker:
-```bash
-docker run -it --rm -p 5678:5678 -v ~/.n8n:/home/node/.n8n n8nio/n8n
-```
-
-Import `n8n-ble-workflow.json`, connect Slack + Google Sheets, and activate the Webhook node.
-
-### 📡 6. Configure Webhook
-Edit `ble_wifi_gps_logger_pi.py`:
-```python
-WEBHOOK_URL = "https://your-server.com/webhook/ble-data"
-```
-
-### 🗺 7. View Heatmaps
-Heatmaps are saved as `ble_heatmap_<timestamp>.html` in the logger directory.
-Open them in your browser.
-
-### 📊 8. Looker Studio Dashboard
-- Connect Google Sheet used by n8n
-- Use provided metrics to visualize traffic
+HTML heatmaps are saved with timestamped filenames.
 
 ---
 
-Let me know if you'd like multi-store deployment tips, sensor inventory scripts, or QR-based scanner configs.
+## 📊 Dashboard with Looker Studio
+
+1. Connect your Google Sheet to Looker Studio
+2. Use provided metrics:
+   - Daily device count
+   - Per-sensor scan volumes
+   - Geo heatmaps (if GPS-enabled)
+3. Import dashboard template from `looker_dashboard_template.json`
+
+---
+
+## 🔔 Alerting System via n8n
+
+| Trigger                    | Description                          |
+|----------------------------|--------------------------------------|
+| Repeat Visitor             | Same `mac_hash` seen multiple times |
+| MAC Burst                  | >10 devices in a single scan         |
+| Low Traffic                | <2 devices seen                     |
+| GPS Drift (optional)       | Sensor outside expected range       |
+| Sensor Offline (external)  | Heartbeat timeout monitoring        |
+
+All alerts are sent via Slack, configurable in `n8n-ble-workflow.json`.
+
+---
+
+## 🧪 CI: Linting with GitHub Actions
+
+Included `.pylintrc` and `.github/workflows/lint.yml` allow for auto-linting on every push.
+
+---
+
+## 📦 Installation Summary
+
+```bash
+git clone https://github.com/your-org/ble-foot-traffic-logger.git
+cd ble-foot-traffic-logger
+pip install -r requirements.txt
+python3 ble_wifi_gps_logger_pi.py
+```
+
+---
+
+## 📁 Directory Overview
+
+| File/Folder                | Description                              |
+|---------------------------|------------------------------------------|
+| `ble_wifi_gps_logger_pi.py` | Main sensor scanner script              |
+| `generate_heatmap.py`     | Script to generate heatmaps               |
+| `provision_pi.sh`         | One-command setup script for the Pi       |
+| `schedule_heatmap.sh`     | Cron-compatible wrapper for heatmaps      |
+| `ble_logger.service`      | Systemd unit definition                   |
+| `requirements.txt`        | Python dependencies                       |
+| `n8n-ble-workflow.json`   | Example n8n integration workflow          |
+| `README.md`               | You're reading it.                        |
+
+---
+
+## 📝 License
+
+MIT License — free to use and adapt with attribution.

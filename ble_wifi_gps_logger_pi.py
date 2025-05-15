@@ -4,9 +4,9 @@ import asyncio
 import subprocess
 import time
 import hashlib
-import os
-
 import requests
+import serial
+import pynmea2
 from bleak import BleakScanner
 
 SENSOR_ID = "HybridPi"
@@ -45,15 +45,13 @@ def get_wifi_devices():
 def get_gps():
     """Read GPS coordinates if GPS hardware is present."""
     try:
-        import serial
-        import pynmea2
         ser = serial.Serial("/dev/ttyAMA0", 9600, timeout=1)
         while True:
             line = ser.readline().decode("ascii", errors="replace")
             if line.startswith("$GPGGA"):
                 msg = pynmea2.parse(line)
                 return {"lat": msg.latitude, "lon": msg.longitude}
-    except (ImportError, Exception):
+    except (serial.SerialException, pynmea2.ParseError):
         return {}
 
 

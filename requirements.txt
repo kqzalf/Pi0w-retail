@@ -1,7 +1,5 @@
+requests
 bleak
+pynmea2
 pandas
 folium
-pyppeteer
-requests
-pynmea2
-google-api-python-client
