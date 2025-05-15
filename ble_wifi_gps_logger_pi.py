@@ -8,6 +8,7 @@ import requests
 import serial
 import pynmea2
 from bleak import BleakScanner
+from bleak.exc import BleakError
 
 SENSOR_ID = "HybridPi"
 WEBHOOK_URL = "https://your-n8n-server.com/webhook/ble-data"
@@ -60,7 +61,7 @@ async def scan_ble():
     try:
         devices = await BleakScanner.discover(timeout=10.0)
         return [{"mac_hash": sha256(d.address), "rssi": d.rssi, "type": "ble"} for d in devices]
-    except Exception:
+    except (BleakError, ValueError):
         return []
 
 
