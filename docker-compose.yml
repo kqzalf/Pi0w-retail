@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  ble-logger:
+    build: .
+    container_name: ble-logger
+    restart: always
+    network_mode: host
+    privileged: true
+    environment:
+      SENSOR_ID: "PiZero-East"
+      GDRIVE_FOLDER_ID: "your_google_drive_folder_id"
+      GSHEET_ID: "your_google_sheet_id"
+    volumes:
+      - ./credentials.json:/opt/ble-logger/credentials.json
