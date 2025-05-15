@@ -6,7 +6,7 @@ heatmap visualization showing the density of detected devices across different l
 
 import os
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional
 import logging
 import pandas as pd
 import folium
@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 class HeatmapConfig:
     """Configuration settings for heatmap generation."""
     def __init__(self):
-        self.DB_PATH: str = os.getenv('HEATMAP_DB_PATH', 'ble_logs.csv')
-        self.OUTPUT_DIR: str = os.getenv('HEATMAP_OUTPUT_DIR', '.')
-        self.HEATMAP_RADIUS: int = int(os.getenv('HEATMAP_RADIUS', '15'))
-        self.HEATMAP_BLUR: int = int(os.getenv('HEATMAP_BLUR', '10'))
-        self.HEATMAP_MAX_ZOOM: int = int(os.getenv('HEATMAP_MAX_ZOOM', '1'))
-        self.MAP_ZOOM_START: int = int(os.getenv('MAP_ZOOM_START', '18'))
-        self.MAP_TILES: str = os.getenv('MAP_TILES', 'OpenStreetMap')
+        self.db_path: str = os.getenv('HEATMAP_DB_PATH', 'ble_logs.csv')
+        self.output_dir: str = os.getenv('HEATMAP_OUTPUT_DIR', '.')
+        self.heatmap_radius: int = int(os.getenv('HEATMAP_RADIUS', '15'))
+        self.heatmap_blur: int = int(os.getenv('HEATMAP_BLUR', '10'))
+        self.heatmap_max_zoom: int = int(os.getenv('HEATMAP_MAX_ZOOM', '1'))
+        self.map_zoom_start: int = int(os.getenv('MAP_ZOOM_START', '18'))
+        self.map_tiles: str = os.getenv('MAP_TILES', 'OpenStreetMap')
 
 class HeatmapGenerator:
     """Class for generating heatmaps from scan data."""
@@ -48,12 +48,12 @@ class HeatmapGenerator:
         Returns:
             True if data was successfully loaded and validated, False otherwise
         """
-        if not os.path.exists(self.config.DB_PATH):
-            logger.error(f"[!] No data file found at {self.config.DB_PATH}")
+        if not os.path.exists(self.config.db_path):
+            logger.error("[!] No data file found at %s", self.config.db_path)
             return False
 
         try:
-            self.df = pd.read_csv(self.config.DB_PATH)
+            self.df = pd.read_csv(self.config.db_path)
             required_columns = ["lat", "lon"]
             if not all(col in self.df.columns for col in required_columns):
                 logger.error("[!] Missing required columns: lat/lon")
@@ -69,8 +69,8 @@ class HeatmapGenerator:
                 return False
 
             return True
-        except Exception as e:
-            logger.error(f"Failed to load data: {e}")
+        except (pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+            logger.error("Failed to load data: %s", e)
             return False
 
     def _validate_coordinates(self) -> bool:
@@ -91,8 +91,8 @@ class HeatmapGenerator:
                 return False
             
             return True
-        except Exception as e:
-            logger.error(f"Failed to validate coordinates: {e}")
+        except (KeyError, AttributeError) as e:
+            logger.error("Failed to validate coordinates: %s", e)
             return False
 
     def generate_heatmap(self) -> Optional[str]:
@@ -105,41 +105,41 @@ class HeatmapGenerator:
             return None
 
         try:
-            logger.info(f"[+] Generating heatmap with {len(self.df)} points...")
+            logger.info("[+] Generating heatmap with %d points...", len(self.df))
             
             # Calculate map center and create base map
             center_lat = self.df["lat"].mean()
             center_lon = self.df["lon"].mean()
             m = folium.Map(
                 location=[center_lat, center_lon],
-                zoom_start=self.config.MAP_ZOOM_START,
-                tiles=self.config.MAP_TILES
+                zoom_start=self.config.map_zoom_start,
+                tiles=self.config.map_tiles
             )
 
             # Add heatmap layer with configurable parameters
             HeatMap(
                 self.df[["lat", "lon"]].values.tolist(),
-                radius=self.config.HEATMAP_RADIUS,
-                blur=self.config.HEATMAP_BLUR,
-                max_zoom=self.config.HEATMAP_MAX_ZOOM
+                radius=self.config.heatmap_radius,
+                blur=self.config.heatmap_blur,
+                max_zoom=self.config.heatmap_max_zoom
             ).add_to(m)
 
             # Create output directory if it doesn't exist
-            os.makedirs(self.config.OUTPUT_DIR, exist_ok=True)
+            os.makedirs(self.config.output_dir, exist_ok=True)
 
             # Save the map with timestamp
             now = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_file = os.path.join(
-                self.config.OUTPUT_DIR,
+                self.config.output_dir,
                 f"ble_heatmap_{now}.html"
             )
             m.save(output_file)
             
-            logger.info(f"[✔] Heatmap saved to {output_file}")
+            logger.info("[✔] Heatmap saved to %s", output_file)
             return output_file
 
-        except Exception as e:
-            logger.error(f"Failed to generate heatmap: {e}")
+        except (IOError, OSError) as e:
+            logger.error("Failed to generate heatmap: %s", e)
             return None
 
 def main() -> None:
