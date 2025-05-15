@@ -251,5 +251,4 @@ async def main() -> None:
             logger.error("Failed to send data: %s", e)
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
-
+    asyncio.run(main())
