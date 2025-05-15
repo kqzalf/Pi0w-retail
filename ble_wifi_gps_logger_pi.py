@@ -28,33 +28,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 @dataclass
-class Config:
-    """Configuration settings for the sensor."""
-    # Core settings
-    sensor_id: str = os.getenv('SENSOR_ID', 'HybridPi')
-    webhook_url: str = os.getenv('WEBHOOK_URL', 'https://your-n8n-server.com/webhook/ble-data')
-    headers: Dict[str, str] = {"Content-Type": "application/json"}
-    
-    # Hardware settings
+class HardwareConfig:
+    """Hardware-related configuration settings."""
     gps_port: str = os.getenv('GPS_PORT', '/dev/ttyAMA0')
     gps_baudrate: int = int(os.getenv('GPS_BAUDRATE', '9600'))
     wifi_interface: str = os.getenv('WIFI_INTERFACE', 'wlan0')
     wifi_monitor_interface: str = os.getenv('WIFI_MONITOR_INTERFACE', 'wlan0mon')
-    
-    # Detection thresholds
+
+@dataclass
+class AlertConfig:
+    """Alert-related configuration settings."""
     rf_jamming_threshold: int = int(os.getenv('RF_JAMMING_THRESHOLD', '-90'))
-    scan_timeout: int = int(os.getenv('SCAN_TIMEOUT', '10'))
     burst_threshold: int = int(os.getenv('BURST_THRESHOLD', '10'))
     low_traffic_threshold: int = int(os.getenv('LOW_TRAFFIC_THRESHOLD', '2'))
-    
-    # GPS settings
-    gps_enabled: bool = os.getenv('GPS_ENABLED', 'true').lower() == 'true'
-    gps_drift_threshold: float = float(os.getenv('GPS_DRIFT_THRESHOLD', '0.001'))  # ~100m in degrees
-    
-    # Alert settings
+    gps_drift_threshold: float = float(os.getenv('GPS_DRIFT_THRESHOLD', '0.001'))
     alert_on_burst: bool = os.getenv('ALERT_ON_BURST', 'true').lower() == 'true'
     alert_on_low_traffic: bool = os.getenv('ALERT_ON_LOW_TRAFFIC', 'true').lower() == 'true'
     alert_on_gps_drift: bool = os.getenv('ALERT_ON_GPS_DRIFT', 'true').lower() == 'true'
+
+@dataclass
+class Config:
+    """Configuration settings for the sensor."""
+    sensor_id: str = os.getenv('SENSOR_ID', 'HybridPi')
+    webhook_url: str = os.getenv('WEBHOOK_URL', 'https://your-n8n-server.com/webhook/ble-data')
+    headers: Dict[str, str] = {"Content-Type": "application/json"}
+    scan_timeout: int = int(os.getenv('SCAN_TIMEOUT', '10'))
+    gps_enabled: bool = os.getenv('GPS_ENABLED', 'true').lower() == 'true'
+    hardware: HardwareConfig = HardwareConfig()
+    alerts: AlertConfig = AlertConfig()
 
 config = Config()
 
@@ -77,7 +78,7 @@ def get_wifi_devices() -> List[Dict[str, Union[str, int]]]:
     """
     try:
         output = subprocess.check_output(
-            ["sudo", "iw", "dev", config.wifi_interface, "scan"],
+            ["sudo", "iw", "dev", config.hardware.wifi_interface, "scan"],
             text=True,
             timeout=config.scan_timeout
         )
@@ -126,7 +127,7 @@ def monitor_wifi_deauth() -> List[Dict[str, str]]:
     logger.info("[*] Starting Wi-Fi deauth detection...")
     try:
         return sniff(
-            iface=config.wifi_monitor_interface,
+            iface=config.hardware.wifi_monitor_interface,
             prn=detect_deauth,
             store=0,
             timeout=config.scan_timeout
@@ -143,7 +144,7 @@ def detect_rf_jamming() -> Optional[Dict[str, Union[str, float]]]:
     """
     try:
         output = subprocess.check_output(
-            ["iw", "dev", config.wifi_interface, "station", "dump"],
+            ["iw", "dev", config.hardware.wifi_interface, "station", "dump"],
             text=True
         )
         noise_levels = [
@@ -155,7 +156,7 @@ def detect_rf_jamming() -> Optional[Dict[str, Union[str, float]]]:
             return None
             
         avg_noise = sum(noise_levels) / len(noise_levels)
-        if avg_noise < config.rf_jamming_threshold:
+        if avg_noise < config.alerts.rf_jamming_threshold:
             logger.warning("[RF Jamming Detected]")
             return {"type": "rf_jamming", "avg_noise": avg_noise}
     except (subprocess.SubprocessError, FileNotFoundError) as e:
@@ -170,8 +171,8 @@ def get_gps() -> Dict[str, float]:
     """
     try:
         with serial.Serial(
-            config.gps_port,
-            config.gps_baudrate,
+            config.hardware.gps_port,
+            config.hardware.gps_baudrate,
             timeout=1
         ) as ser:
             for _ in range(10):  # Try up to 10 times
@@ -223,9 +224,9 @@ async def main() -> None:
 
     # Check for alerts
     total_devices = len(all_data)
-    if config.alert_on_burst and total_devices > config.burst_threshold:
+    if config.alerts.alert_on_burst and total_devices > config.alerts.burst_threshold:
         logger.warning("Burst traffic detected: %d devices", total_devices)
-    if config.alert_on_low_traffic and total_devices < config.low_traffic_threshold:
+    if config.alerts.alert_on_low_traffic and total_devices < config.alerts.low_traffic_threshold:
         logger.warning("Low traffic detected: %d devices", total_devices)
 
     # Add metadata to each entry

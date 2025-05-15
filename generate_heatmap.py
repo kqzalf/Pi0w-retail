@@ -30,6 +30,29 @@ class HeatmapConfig:
         self.map_zoom_start: int = int(os.getenv('MAP_ZOOM_START', '18'))
         self.map_tiles: str = os.getenv('MAP_TILES', 'OpenStreetMap')
 
+    def get_heatmap_params(self) -> dict:
+        """Get heatmap layer parameters.
+        
+        Returns:
+            Dictionary containing heatmap configuration parameters
+        """
+        return {
+            'radius': self.heatmap_radius,
+            'blur': self.heatmap_blur,
+            'max_zoom': self.heatmap_max_zoom
+        }
+
+    def get_map_params(self) -> dict:
+        """Get base map parameters.
+        
+        Returns:
+            Dictionary containing map configuration parameters
+        """
+        return {
+            'zoom_start': self.map_zoom_start,
+            'tiles': self.map_tiles
+        }
+
 class HeatmapGenerator:
     """Class for generating heatmaps from scan data."""
     
@@ -112,16 +135,13 @@ class HeatmapGenerator:
             center_lon = self.df["lon"].mean()
             m = folium.Map(
                 location=[center_lat, center_lon],
-                zoom_start=self.config.map_zoom_start,
-                tiles=self.config.map_tiles
+                **self.config.get_map_params()
             )
 
             # Add heatmap layer with configurable parameters
             HeatMap(
                 self.df[["lat", "lon"]].values.tolist(),
-                radius=self.config.heatmap_radius,
-                blur=self.config.heatmap_blur,
-                max_zoom=self.config.heatmap_max_zoom
+                **self.config.get_heatmap_params()
             ).add_to(m)
 
             # Create output directory if it doesn't exist
