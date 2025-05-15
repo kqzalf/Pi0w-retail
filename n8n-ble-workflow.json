@@ -1,5 +1,5 @@
 {
-  "name": "BLE Foot Traffic Ingestion",
+  "name": "BLE Foot Traffic Ingestion & Alerts",
   "nodes": [
     {
       "parameters": {
@@ -15,136 +15,20 @@
       "typeVersion": 1,
       "position": [
         200,
-        300
+        200
       ],
       "webhookId": "ble-data-ingest"
     },
     {
       "parameters": {
-        "sheetId": "YOUR_GOOGLE_SHEET_ID",
-        "range": "Sheet1!A:E",
-        "valueInputMode": "RAW",
-        "options": {}
-      },
-      "name": "Append to Google Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 1,
-      "position": [
-        600,
-        300
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "your-credential-id",
-          "name": "Google Sheets OAuth"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "functionCode": "\nconst output = [];\n\nfor (const item of items[0].json) {\n  output.push({\n    json: {\n      timestamp: item.timestamp,\n      datetime: new Date(item.timestamp * 1000).toISOString(),\n      mac_hash: item.mac_hash,\n      rssi: item.rssi,\n      sensor: item.sensor\n    }\n  });\n}\n\nreturn output;\n"
+        "functionCode": "\nconst output = [];\n\nfor (const item of items[0].json) {\n  output.push({\n    json: {\n      timestamp: item.timestamp,\n      datetime: new Date(item.timestamp * 1000).toISOString(),\n      mac_hash: item.mac_hash,\n      rssi: item.rssi,\n      sensor: item.sensor,\n      type: item.type || \"ble\",\n      lat: item.lat || null,\n      lon: item.lon || null\n    }\n  });\n}\n\nreturn output;\n"
       },
       "name": "Parse BLE Data",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
         400,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "channel": "#ble-logs",
-        "text": "\ud83d\udce1 BLE Scan Received:\nTotal devices: {{$json[\"length\"]}}\nSensor: {{$json[\"sensor\"]}}",
-        "additionalFields": {}
-      },
-      "name": "Send Slack Alert",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 1,
-      "position": [
-        800,
-        150
-      ],
-      "credentials": {
-        "slackApi": {
-          "id": "your-slack-credential-id",
-          "name": "Slack API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "number": [
-            {
-              "value1": "={{ $items().length }}",
-              "operation": "larger",
-              "value2": 20
-            }
-          ]
-        }
-      },
-      "name": "High Traffic Check",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        800,
-        450
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "channel": "#ble-logs",
-        "text": "\u26a0\ufe0f High BLE Traffic Detected at {{$json[\"sensor\"]}}!\nDetected {{$json[\"length\"]}} devices.",
-        "additionalFields": {}
-      },
-      "name": "High Traffic Slack Alert",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 1,
-      "position": [
-        1000,
-        450
-      ],
-      "credentials": {
-        "slackApi": {
-          "id": "your-slack-credential-id",
-          "name": "Slack API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "functionCode": "\nconst seen = new Set();\nfor (const item of items) {\n  if (seen.has(item.json.mac_hash)) {\n    item.json.repeat_visitor = true;\n  } else {\n    seen.add(item.json.mac_hash);\n    item.json.repeat_visitor = false;\n  }\n}\nreturn items;\n"
-      },
-      "name": "Tag Repeat Visitors",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        400,
-        500
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "boolean": [
-            {
-              "value1": "={{ $json[\"repeat_visitor\"] }}",
-              "operation": "true"
-            }
-          ]
-        }
-      },
-      "name": "Is Repeat Visitor",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        600,
-        500
+        200
       ]
     },
     {
@@ -159,8 +43,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 1,
       "position": [
-        800,
-        500
+        1000,
+        400
       ],
       "credentials": {
         "slackApi": {
@@ -185,8 +69,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        400,
-        700
+        600,
+        400
       ]
     },
     {
@@ -201,8 +85,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 1,
       "position": [
-        600,
-        700
+        800,
+        400
       ],
       "credentials": {
         "slackApi": {
@@ -227,8 +111,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        400,
-        850
+        600,
+        550
       ]
     },
     {
@@ -243,50 +127,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 1,
       "position": [
-        600,
-        850
-      ],
-      "credentials": {
-        "slackApi": {
-          "id": "your-slack-credential-id",
-          "name": "Slack API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "number": [
-            {
-              "value1": "={{ $json[\"lat\"] || 0 }}",
-              "operation": "larger",
-              "value2": 90
-            }
-          ]
-        }
-      },
-      "name": "GPS Drift Check",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        400,
-        1000
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "channel": "#ble-logs",
-        "text": "\ud83e\udded Sensor {{$json[\"sensor\"]}} reported a GPS anomaly or drift.",
-        "additionalFields": {}
-      },
-      "name": "GPS Drift Alert",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 1,
-      "position": [
-        600,
-        1000
+        800,
+        550
       ],
       "credentials": {
         "slackApi": {
@@ -310,30 +152,6 @@
     },
     "Parse BLE Data": {
       "main": [
-        [
-          {
-            "node": "Append to Google Sheet",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Slack Alert",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        {
-          "node": "High Traffic Check",
-          "type": "main",
-          "index": 0
-        },
-        {
-          "node": "Tag Repeat Visitors",
-          "type": "main",
-          "index": 0
-        },
         {
           "node": "MAC Burst Check",
           "type": "main",
@@ -343,66 +161,29 @@
           "node": "Low Traffic Check",
           "type": "main",
           "index": 0
-        },
-        {
-          "node": "GPS Drift Check",
-          "type": "main",
-          "index": 0
-        }
-      ]
-    },
-    "High Traffic Check": {
-      "main": [
-        {
-          "node": "High Traffic Slack Alert",
-          "type": "main",
-          "index": 0
-        }
-      ]
-    },
-    "Tag Repeat Visitors": {
-      "main": [
-        {
-          "node": "Is Repeat Visitor",
-          "type": "main",
-          "index": 0
-        }
-      ]
-    },
-    "Is Repeat Visitor": {
-      "main": [
-        {
-          "node": "Repeat Visitor Alert",
-          "type": "main",
-          "index": 0
         }
       ]
     },
     "MAC Burst Check": {
       "main": [
-        {
-          "node": "MAC Burst Alert",
-          "type": "main",
-          "index": 0
-        }
+        [
+          {
+            "node": "MAC Burst Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Low Traffic Check": {
       "main": [
-        {
-          "node": "Low Traffic Alert",
-          "type": "main",
-          "index": 0
-        }
-      ]
-    },
-    "GPS Drift Check": {
-      "main": [
-        {
-          "node": "GPS Drift Alert",
-          "type": "main",
-          "index": 0
-        }
+        [
+          {
+            "node": "Low Traffic Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
