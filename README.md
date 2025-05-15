@@ -20,9 +20,38 @@ This project provides a complete solution for anonymously tracking foot traffic 
 | Scheduled Heatmaps           | Cron integration to auto-generate new heatmaps (every 6 hours, by default)   |
 | Full Provisioning Script     | Automatically sets up the Pi with all software and system configs            |
 | Git Auto-Update              | Sensors can pull latest repo updates on boot                                 |
-| ENV-Based Sensor ID          | Auto-name devices and inject into log stream via environment variable        |
+| ENV-Based Configuration      | Flexible configuration via environment variables                             |
 
----
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable                    | Description                                | Default Value           |
+|----------------------------|--------------------------------------------|------------------------|
+| SENSOR_ID                  | Unique identifier for the sensor           | HybridPi               |
+| WEBHOOK_URL                | n8n webhook endpoint                      | https://your-n8n-server.com/webhook/ble-data |
+| GPS_ENABLED               | Enable/disable GPS functionality          | true                   |
+| GPS_PORT                  | GPS device port                          | /dev/ttyAMA0          |
+| GPS_BAUDRATE             | GPS device baud rate                     | 9600                  |
+| WIFI_INTERFACE           | Wi-Fi interface name                     | wlan0                 |
+| WIFI_MONITOR_INTERFACE   | Wi-Fi monitor interface name             | wlan0mon              |
+| RF_JAMMING_THRESHOLD    | Threshold for RF jamming detection       | -90                   |
+| SCAN_TIMEOUT            | Timeout for device scanning (seconds)    | 10                    |
+| BURST_THRESHOLD        | Alert threshold for burst traffic        | 10                    |
+| LOW_TRAFFIC_THRESHOLD  | Alert threshold for low traffic          | 2                     |
+| GPS_DRIFT_THRESHOLD    | Threshold for GPS drift detection        | 0.001                 |
+
+### Heatmap Configuration
+
+| Variable                    | Description                                | Default Value           |
+|----------------------------|--------------------------------------------|------------------------|
+| HEATMAP_DB_PATH           | Path to the CSV data file                 | ble_logs.csv          |
+| HEATMAP_OUTPUT_DIR        | Directory for generated heatmaps          | .                     |
+| HEATMAP_RADIUS           | Radius of heatmap points                  | 15                    |
+| HEATMAP_BLUR             | Blur factor for heatmap                   | 10                    |
+| HEATMAP_MAX_ZOOM         | Maximum zoom level for heatmap            | 1                     |
+| MAP_ZOOM_START           | Initial zoom level for map                | 18                    |
+| MAP_TILES                | Map tile provider                         | OpenStreetMap         |
 
 ## 🛠️ Hardware Requirements
 
@@ -32,8 +61,6 @@ This project provides a complete solution for anonymously tracking foot traffic 
 - Optional: GPS module (UART or USB)
 - Power supply
 - Internet access (via Wi-Fi)
-
----
 
 ## 🛍️ Recommended Hardware (Order from Amazon)
 
@@ -60,8 +87,6 @@ Here is a list of recommended hardware that can be ordered from Amazon to set up
 7. **USB to Micro-USB OTG Adapter**  
    - [Micro-USB OTG Adapter](https://www.amazon.com/dp/B07F6Q48ZP)
 
----
-
 ## ⚙️ First-Time Provisioning (One Command Setup)
 
 SSH into the Pi after first boot and run:
@@ -79,22 +104,33 @@ This script:
 - Injects your `SENSOR_ID` into the logger
 - Sets hostname and timezone
 
----
-
 ## 🖥️ Running the Logger
 
+### Systemd Service
 The systemd service runs the logger every minute on boot:
 ```bash
+# Check service status
 sudo systemctl status ble-logger.service
+
+# View logs
 sudo journalctl -u ble-logger.service -f
+
+# Start service
+sudo systemctl start ble-logger.service
+
+# Enable service on boot
+sudo systemctl enable ble-logger.service
 ```
 
-Manually test the script:
+### Manual Testing
+Test the script manually:
 ```bash
+# Basic test
 python3 ble_wifi_gps_logger_pi.py
-```
 
----
+# Test with custom configuration
+SENSOR_ID=test-sensor GPS_ENABLED=true python3 ble_wifi_gps_logger_pi.py
+```
 
 ## 📄 Data Format Example
 
@@ -128,26 +164,27 @@ python3 ble_wifi_gps_logger_pi.py
 ]
 ```
 
----
-
 ## 🗺️ Heatmap Generation
 
-### Manual
+### Manual Generation
 ```bash
+# Basic generation
 python3 generate_heatmap.py
+
+# Custom configuration
+HEATMAP_OUTPUT_DIR=/path/to/output MAP_ZOOM_START=15 python3 generate_heatmap.py
 ```
 
-### Scheduled
+### Scheduled Generation
 Add to crontab:
 ```bash
 crontab -e
+
 # Every 6 hours:
 0 */6 * * * /home/pi/ble-foot-traffic-logger/schedule_heatmap.sh
 ```
 
-HTML heatmaps are saved with timestamped filenames.
-
----
+HTML heatmaps are saved with timestamped filenames in the configured output directory.
 
 ## 📊 Dashboard with Looker Studio
 
@@ -158,22 +195,86 @@ HTML heatmaps are saved with timestamped filenames.
    - Geo heatmaps (if GPS-enabled)
 3. Import dashboard template from `looker_dashboard_template.json`
 
----
-
 ## 🔔 Alerting System via n8n
 
-| Trigger                    | Description                          |
-|----------------------------|--------------------------------------|
-| Repeat Visitor             | Same `mac_hash` seen multiple times |
-| MAC Burst                  | >10 devices in a single scan        |
-| Low Traffic                | <2 devices seen                     |
-| GPS Drift (optional)       | Sensor outside expected range       |
-| Sensor Offline (external)  | Heartbeat timeout monitoring        |
+| Trigger                    | Description                          | Threshold (Configurable) |
+|----------------------------|--------------------------------------|-------------------------|
+| Repeat Visitor             | Same `mac_hash` seen multiple times | Configurable in n8n     |
+| MAC Burst                  | >10 devices in a single scan        | BURST_THRESHOLD        |
+| Low Traffic                | <2 devices seen                     | LOW_TRAFFIC_THRESHOLD  |
+| GPS Drift                  | Sensor outside expected range       | GPS_DRIFT_THRESHOLD    |
+| Sensor Offline             | Heartbeat timeout monitoring        | Configurable in n8n     |
 
 All alerts are sent via Slack, configurable in `n8n-ble-workflow.json`.
 
----
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **GPS Not Working**
+   - Check GPS_ENABLED environment variable
+   - Verify GPS module connection
+   - Check GPS_PORT and GPS_BAUDRATE settings
+
+2. **Wi-Fi Scanning Issues**
+   - Ensure monitor mode is enabled
+   - Check WIFI_INTERFACE and WIFI_MONITOR_INTERFACE settings
+   - Verify sudo permissions
+
+3. **BLE Scanning Issues**
+   - Check Bluetooth service status
+   - Verify BLE hardware compatibility
+   - Check system permissions
+
+4. **Data Not Sending**
+   - Verify WEBHOOK_URL is correct
+   - Check network connectivity
+   - Verify n8n server is running
+
+### Logs and Debugging
+
+- System logs: `sudo journalctl -u ble-logger.service -f`
+- Application logs: Check the configured logging output
+- Debug mode: Set `LOG_LEVEL=DEBUG` environment variable
+
+## 🔄 Updates and Maintenance
+
+### Git Auto-Update
+The system can automatically update on boot:
+```bash
+# Enable auto-update
+sudo systemctl enable git-update.service
+
+# Check update status
+sudo systemctl status git-update.service
+```
+
+### Manual Update
+```bash
+git pull origin main
+sudo systemctl restart ble-logger.service
+```
 
 ## 🖋️ License
 
 MIT License — free to use and adapt with attribution.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 📝 Changelog
+
+### v1.1.0
+- Added environment variable configuration
+- Improved error handling and logging
+- Enhanced heatmap generation
+- Added data validation
+- Added GPS drift detection
+
+### v1.0.0
+- Initial release
