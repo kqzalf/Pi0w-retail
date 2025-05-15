@@ -154,7 +154,6 @@ def detect_rf_jamming() -> Optional[Dict[str, Union[str, float]]]:
         ]
         if not noise_levels:
             return None
-            
         avg_noise = sum(noise_levels) / len(noise_levels)
         if avg_noise < config.alerts.rf_jamming_threshold:
             logger.warning("[RF Jamming Detected]")

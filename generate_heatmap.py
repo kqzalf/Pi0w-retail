@@ -55,7 +55,6 @@ class HeatmapConfig:
 
 class HeatmapGenerator:
     """Class for generating heatmaps from scan data."""
-    
     def __init__(self, config: Optional[HeatmapConfig] = None):
         """Initialize the heatmap generator.
         
@@ -107,12 +106,10 @@ class HeatmapGenerator:
             if not self.df['lat'].between(-90, 90).all():
                 logger.error("Invalid latitude values detected")
                 return False
-            
             # Check longitude bounds (-180 to 180)
             if not self.df['lon'].between(-180, 180).all():
                 logger.error("Invalid longitude values detected")
                 return False
-            
             return True
         except (KeyError, AttributeError) as e:
             logger.error("Failed to validate coordinates: %s", e)
@@ -129,7 +126,6 @@ class HeatmapGenerator:
 
         try:
             logger.info("[+] Generating heatmap with %d points...", len(self.df))
-            
             # Calculate map center and create base map
             center_lat = self.df["lat"].mean()
             center_lon = self.df["lon"].mean()
@@ -154,7 +150,6 @@ class HeatmapGenerator:
                 f"ble_heatmap_{now}.html"
             )
             m.save(output_file)
-            
             logger.info("[✔] Heatmap saved to %s", output_file)
             return output_file
 
